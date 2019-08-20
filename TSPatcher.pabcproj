@@ -4,6 +4,7 @@
     <Item Type="SourceFile" Name="TSPatcher.pas" Path="TSPatcher.pas" />
     <Item Type="SourceFile" Name="WeightOV - Books Patcher.pas" Path="WeightOV - Books Patcher.pas" />
     <Item Type="SourceFile" Name="Luminocity - Patcher.pas" Path="Luminocity - Patcher.pas" />
+    <Item Type="SourceFile" Name="WeightOV - Books.pas" Path="WeightOV - Books.pas" />
     <Item Type="Reference" AssemblyName="System" FullAssemblyName="System.dll" />
   </Items>
 </Project>
