@@ -185,11 +185,11 @@ begin
     overrideElement := WinningOverride(overrideElement);
     debug('Processing ' + Stringify(overrideElement));
     Inc(processed);
-//    if IsPatcherElement(overrideElement) then begin
-//      debug('Skipping ' + Stringify(overrideElement));
-//      Inc(skipped);
-//      continue;
-//    end;
+    //    if IsPatcherElement(overrideElement) then begin
+    //      debug('Skipping ' + Stringify(overrideElement));
+    //      Inc(skipped);
+    //      continue;
+    //    end;
     if not ShouldBePatched(overrideElement) then begin
       debug('Skipping ' + Stringify(overrideElement));
       Inc(skipped);
@@ -275,6 +275,23 @@ procedure debug(msg: String);
 begin
   if enableDebug then
     AddMessage(msg);
+end;
+
+procedure printChildren(element: IwbContainer);
+var
+  child: IInterface;
+  i: integer;
+begin
+  if ElementCount(element) < 2 then
+    AddMessage(Path(element))
+  else
+  begin
+    AddMessage(Path(element));
+    for i := 0 to Pred(ElementCount(element)) do
+    begin
+      printChildren(ElementByIndex(element, i));
+    end;
+  end;
 end;
 
 end.
