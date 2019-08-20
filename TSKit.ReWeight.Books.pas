@@ -1,10 +1,6 @@
-﻿{
-  New script template, only shows processed records
-  Assigning any nonzero value to Result will terminate script
-}
-unit userscript;
+﻿unit TSKitReWeightBooks;
 
-uses TSPatcher;
+uses 'TSKit.Patcher';
 
 const
   /// Books and diaries

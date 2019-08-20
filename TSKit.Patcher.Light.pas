@@ -1,5 +1,5 @@
-﻿unit WeightOverhaulBooksPatcher;
-uses TSPatcher;
+﻿unit TSKitPatcherLight;
+uses 'TSKit.Patcher';
 
 //==============================================================================
 function Initialize: integer;

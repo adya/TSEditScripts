@@ -1,11 +1,10 @@
-unit WeightOverhaulBooksPatcher;
-uses TSPatcher;
+﻿unit TSKitPatcherBooks;
+uses 'TSKit.Patcher';
 
 //==============================================================================
 function Initialize: integer;
 begin
-  AddRecord('WeightOV - Lightweight - MERGED - BCS.esp', 'DATA\Weight');
-  AddRecord('WeightOV - Lightweight - CACO.esp', 'DATA\Weight');
+  AddRecord('Dynamic Patch - Books Weight.esp', 'DATA\Weight');
   AddRecord('Book Covers Skyrim.esp', 'MODEL');
   AddRecord('Book Covers Skyrim.esp', 'INAM');
   Patch('BOOK');

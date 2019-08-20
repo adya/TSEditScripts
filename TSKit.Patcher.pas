@@ -1,96 +1,16 @@
-﻿unit TSPatcher;
+﻿unit TSKitPatcher;
 
 uses mteElements;
-//========================================================================
 
+// ================== Configurations ==================
 const
-  recordsDelimiter = '@';
-  enableDebug = true;
+  enableDebug = false;
 
-var
-  patchRecords: TStringList;
-  patchPlugin: IInterface;
 
-/// Gets Element of the Patcher plugin if any for specified element.
-function GetPatcherElement(patcherPluginName: String; element: IInterface): IInterface;
-var
-  i: integer;
-  baseMaster, overrideMaster: IInterface;
-begin
-  baseMaster := MasterOrSelf(element);
-  for i := 0 to Pred(OverrideCount(baseMaster)) do
-  begin
-    overrideMaster := OverrideByIndex(baseMaster, i);
-    if GetFileName(GetFile(overrideMaster)) = patcherPluginName then begin
-      Result := overrideMaster;
-      Exit;
-    end;
-  end;
-end;
+// ================== Patcher ==================
 
-/// Determines whether given element has master overrides from Patcher records.
-function ShouldBePatched(element: IInterface): Boolean;
-var
-  i, j: Integer;
-  fileName: String;
-  baseMaster, overrideMaster: IInterface;
-begin
-  
-  baseMaster := MasterOrSelf(element);
-  for i := 0 to Pred(OverrideCount(baseMaster)) do
-  begin
-    overrideMaster := OverrideByIndex(baseMaster, i);
-    for j := 0 to Pred(patchRecords.Count) do
-    begin
-      if GetFileName(GetFile(overrideMaster)) = PatcherPluginNameByIndex(j) then begin
-        Result := true;
-        Exit;
-      end;
-    end;	
-  end;
-end;
-
-function IsPatcherPlugin(f: IInterface): Boolean;
-var
-  i: Integer;
-  patchPluginName: String;
-begin
-  for i := 0 to Pred(patchRecords.Count) do
-  begin
-    patchPluginName := PatcherPluginNameByIndex(i);
-    if GetFileName(f) = patchPluginName then begin
-      Result := true;
-      Exit;
-    end;
-  end;
-  Result := false;
-end;
-
-/// Checks whether or not given element is from one of the patcher plugins.
-function IsPatcherElement(element: IInterface): Boolean;
-var
-  i: integer;
-  patchPluginName: String;
-  f: IInterface;
-begin
-  for i := 0 to Pred(patchRecords.Count) do
-  begin
-    patchPluginName := PatcherPluginNameByIndex(i);
-    f := GetFile(element);
-    if GetFileName(f) = patchPluginName then begin
-      Result := true;
-      Exit;
-    end;
-  end;
-  Result := false;
-end;
-
-procedure Init(s: String);
-begin
-  signature := s;
-  
-end;
-
+/// Adds an element of specified plugin at given path as a reference value
+/// that patcher will use in resulting patch.
 procedure AddRecord(sourcePluginName: String; recordPath: String);
 begin
   if not Assigned(patchRecords) then begin
@@ -100,26 +20,7 @@ begin
   AddMessage('Registered ' + recordPath + ' from ' + sourcePluginName);
 end;
 
-function PatcherPluginPathByIndex(index: Integer): String;
-var
-  s: TStrings;
-begin
-  s := Split(patchRecords[index], recordsDelimiter, true);
-  if s.Count > 1 then
-    Result := s[1];
-  s.Free;
-end;
-
-function PatcherPluginNameByIndex(index: Integer): String;
-var
-  s: TStrings;
-begin
-  s := Split(patchRecords[index], recordsDelimiter, true);
-  if s.Count > 0 then
-    Result := s[0];
-  s.Free;
-end;
-
+/// Creates a patch for all loaded plugins using
 procedure Patch(signature: String);
 var
   group,
@@ -167,6 +68,66 @@ begin
   end;
   
 end;
+
+procedure Reset();
+begin
+  patchPlugin := nil;
+  
+  if Assigned(patchRecords) then begin
+    patchRecords.Free;
+  end;
+  patchRecords := TStringList.create;
+end;
+
+// ================== Utilities ==================
+
+function Split(Input: string; const Delimiter: Char; strict: boolean): TStringList;
+var
+  Strings: TStrings;
+begin
+  Strings := TStringList.create;
+  Strings.StrictDelimiter := true;
+  Strings.Delimiter := Delimiter;
+  Strings.DelimitedText := Input;
+  Result := Strings;
+end;
+
+function Stringify(element: IInterface): String;
+begin
+  Result := Name(element) + ' from ' + GetFileName(GetFile(element));
+end;
+
+procedure debug(msg: String);
+begin
+  if enableDebug then
+    AddMessage(msg);
+end;
+
+procedure printChildren(element: IwbContainer);
+var
+  child: IInterface;
+  i: integer;
+begin
+  if ElementCount(element) < 2 then
+    AddMessage(Path(element))
+  else
+  begin
+    AddMessage(Path(element));
+    for i := 0 to Pred(ElementCount(element)) do
+    begin
+      printChildren(ElementByIndex(element, i));
+    end;
+  end;
+end;
+
+// ================== Patcher Privates ==================
+
+const
+  recordsDelimiter = '@';
+  
+var
+  patchRecords: TStringList;
+  patchPlugin: IInterface;
 
 procedure PatchGroup(group, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
 var
@@ -245,53 +206,98 @@ begin
 end;
 
 
-procedure Reset();
-begin
-  patchPlugin := nil;
-  
-  if Assigned(patchRecords) then begin
-    patchRecords.Free;
-  end;
-  patchRecords := TStringList.create;
-end;
-
-function Split(Input: string; const Delimiter: Char; strict: boolean): TStringList;
+function PatcherPluginPathByIndex(index: Integer): String;
 var
-  Strings: TStrings;
+  s: TStrings;
 begin
-  Strings := TStringList.create;
-  Strings.StrictDelimiter := true;
-  Strings.Delimiter := Delimiter;
-  Strings.DelimitedText := Input;
-  Result := Strings;
+  s := Split(patchRecords[index], recordsDelimiter, true);
+  if s.Count > 1 then
+    Result := s[1];
+  s.Free;
 end;
 
-function Stringify(element: IInterface): String;
-begin
-  Result := Name(element) + ' from ' + GetFileName(GetFile(element));
-end;
-
-procedure debug(msg: String);
-begin
-  if enableDebug then
-    AddMessage(msg);
-end;
-
-procedure printChildren(element: IwbContainer);
+function PatcherPluginNameByIndex(index: Integer): String;
 var
-  child: IInterface;
+  s: TStrings;
+begin
+  s := Split(patchRecords[index], recordsDelimiter, true);
+  if s.Count > 0 then
+    Result := s[0];
+  s.Free;
+end;
+
+/// Gets Element of the Patcher plugin if any for specified element.
+function GetPatcherElement(patcherPluginName: String; element: IInterface): IInterface;
+var
   i: integer;
+  baseMaster, overrideMaster: IInterface;
 begin
-  if ElementCount(element) < 2 then
-    AddMessage(Path(element))
-  else
+  baseMaster := MasterOrSelf(element);
+  for i := 0 to Pred(OverrideCount(baseMaster)) do
   begin
-    AddMessage(Path(element));
-    for i := 0 to Pred(ElementCount(element)) do
-    begin
-      printChildren(ElementByIndex(element, i));
+    overrideMaster := OverrideByIndex(baseMaster, i);
+    if GetFileName(GetFile(overrideMaster)) = patcherPluginName then begin
+      Result := overrideMaster;
+      Exit;
     end;
   end;
+end;
+
+/// Determines whether given element has master overrides from Patcher records.
+function ShouldBePatched(element: IInterface): Boolean;
+var
+  i, j: Integer;
+  fileName: String;
+  baseMaster, overrideMaster: IInterface;
+begin
+  
+  baseMaster := MasterOrSelf(element);
+  for i := 0 to Pred(OverrideCount(baseMaster)) do
+  begin
+    overrideMaster := OverrideByIndex(baseMaster, i);
+    for j := 0 to Pred(patchRecords.Count) do
+    begin
+      if GetFileName(GetFile(overrideMaster)) = PatcherPluginNameByIndex(j) then begin
+        Result := true;
+        Exit;
+      end;
+    end;	
+  end;
+end;
+
+function IsPatcherPlugin(f: IInterface): Boolean;
+var
+  i: Integer;
+  patchPluginName: String;
+begin
+  for i := 0 to Pred(patchRecords.Count) do
+  begin
+    patchPluginName := PatcherPluginNameByIndex(i);
+    if GetFileName(f) = patchPluginName then begin
+      Result := true;
+      Exit;
+    end;
+  end;
+  Result := false;
+end;
+
+/// Checks whether or not given element is from one of the patcher plugins.
+function IsPatcherElement(element: IInterface): Boolean;
+var
+  i: integer;
+  patchPluginName: String;
+  f: IInterface;
+begin
+  for i := 0 to Pred(patchRecords.Count) do
+  begin
+    patchPluginName := PatcherPluginNameByIndex(i);
+    f := GetFile(element);
+    if GetFileName(f) = patchPluginName then begin
+      Result := true;
+      Exit;
+    end;
+  end;
+  Result := false;
 end;
 
 end.
