@@ -5,6 +5,8 @@ uses mteElements;
 // ================== Configurations ==================
 const
   enableDebug = false;
+  allowDuplicates = true;
+  patchPluginNamePrefix = 'Dynamic Patch';
 
 
 // ================== Patcher ==================
@@ -21,7 +23,7 @@ begin
 end;
 
 /// Creates a patch for all loaded plugins using
-procedure Patch(signature: String);
+procedure Patch(signature, pluginName: String);
 var
   group,
   block,
@@ -33,6 +35,13 @@ begin
   skipped := 0;
   patched := 0;
   copied := 0;
+  
+  if signature = '' then begin
+    AddMessage('Signature required');
+    exit;
+  end;
+  patchSignature := signature;
+  patchPluginName := pluginName;
   try
     for i := 0 to Pred(FileCount) do
     begin
@@ -61,7 +70,7 @@ begin
     if Assigned(patchPlugin) then begin
       SortMasters(patchPlugin);
       CleanMasters(patchPlugin);
-      AddMessage('Patch file created. Processed ' + IntToStr(processed) + ' records. Skipped ' + IntToStr(skipped) + ' records. Copied ' + IntToStr(copied) + ' records. Patched ' + IntToStr(patched) + ' records');
+      AddMessage(patchPluginName + ' file created. Processed ' + IntToStr(processed) + ' records. Skipped ' + IntToStr(skipped) + ' records. Copied ' + IntToStr(copied) + ' records. Patched ' + IntToStr(patched) + ' records');
     end;
   finally
     Reset();
@@ -76,6 +85,8 @@ begin
   if Assigned(patchRecords) then begin
     patchRecords.Free;
   end;
+  patchSignature := '';
+  patchPluginName := '';
   patchRecords := TStringList.create;
 end;
 
@@ -124,10 +135,12 @@ end;
 
 const
   recordsDelimiter = '@';
-  
+
 var
   patchRecords: TStringList;
   patchPlugin: IInterface;
+  patchSignature,
+  patchPluginName: string;
 
 procedure PatchGroup(group, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
 var
@@ -157,8 +170,16 @@ begin
       continue;
     end;
     
-    if not Assigned(patchPlugin) then
-      patchPlugin := AddNewFile;
+    if not Assigned(patchPlugin) then begin
+      if patchPluginName = '' then
+        patchPluginName := patchSignature;
+      
+      patchPluginName := patchPluginNamePrefix + ' - ' + patchPluginName;
+      if allowDuplicates then
+        patchPluginName := patchPluginName + ' - ' + FormatDateTime('hhmmsszzz', Now);
+      patchPluginName := patchPluginName + '.esp';
+      patchPlugin := AddNewFileName(patchPluginName, True);
+    end;
     
     if not Assigned(patchPlugin) then
       Exit;

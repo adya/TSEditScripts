@@ -12,7 +12,7 @@ begin
   AddRecord('Particle Patch for ENB SSE.esp', 'XCIM');
   AddRecord('Soulmancer Soundtrack - NoVindDun.esp', 'XCMO');
   AddRecord('Blacksmith Forge Water Fix SE USSEP.esp', 'DATA');
-  Patch('CELL');
+  Patch('CELL', 'Light');
   Result := 1;
 end;
 

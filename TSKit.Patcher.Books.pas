@@ -4,10 +4,10 @@ uses 'TSKit.Patcher';
 //==============================================================================
 function Initialize: integer;
 begin
-  AddRecord('Dynamic Patch - Books Weight.esp', 'DATA\Weight');
+//  AddRecord('Dynamic Patch - Books Weight.esp', 'DATA\Weight');
   AddRecord('Book Covers Skyrim.esp', 'MODEL');
   AddRecord('Book Covers Skyrim.esp', 'INAM');
-  Patch('BOOK');
+  Patch('BOOK', 'Books');
   Result := 1;
 end;
 
