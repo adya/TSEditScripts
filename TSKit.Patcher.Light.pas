@@ -13,7 +13,7 @@ begin
   AddRecord('Soulmancer Soundtrack - NoVindDun.esp', 'XCMO');
   AddRecord('Blacksmith Forge Water Fix SE USSEP.esp', 'DATA');
   Patch('CELL', 'Light');
-  Result := 1;
+  Result := 0;
 end;
 
 end.

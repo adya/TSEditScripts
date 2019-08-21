@@ -1,8 +1,8 @@
-﻿unit TSKit;
+unit TSKit;
 
 const
   enableDebug = false;
-  allowDuplicates = true;  
+  allowDuplicates = false;
   patchPluginNamePrefix = 'Dynamic Patch';
 
 function Split(Input: string; const Delimiter: Char; strict: boolean): TStringList;

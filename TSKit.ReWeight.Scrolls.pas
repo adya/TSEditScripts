@@ -1,9 +1,10 @@
 ﻿unit TSKitReWeightBooks;
 
-uses TSKitPatcher;
+uses TSKit;
+uses 'TSKit.Patcher';
 
 const
-  pluginName = 'Scrolls';
+  pluginName = 'ReWeight.Scrolls';
   
   /// Scrolls
   scrollWeight = 0.1;
@@ -40,7 +41,6 @@ begin
       
       if not Assigned(patchPlugin) then
         patchPlugin := CreatePatchFile(pluginName);
-      
       if not Assigned(patchPlugin) then
         Exit;
       
@@ -57,7 +57,7 @@ begin
     CleanMasters(patchPlugin);
     AddMessage('Patch file created. Processed ' + IntToStr(processed) + ' scrolls. Skipped ' + IntToStr(skipped) + ' scrolls.');
   end;
-  Result := 1;
+  Result := 0;
 end;
 
 end.

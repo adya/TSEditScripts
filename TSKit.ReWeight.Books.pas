@@ -1,8 +1,12 @@
 ﻿unit TSKitReWeightBooks;
 
+uses TSKit;
 uses 'TSKit.Patcher';
 
 const
+
+  pluginName = 'ReWeight.Books';
+  
   /// Books and diaries
   bookWeight = 0.5;
   
@@ -18,7 +22,6 @@ var
   group,
   overrideElement,
   element,
-  patcherElement,
   patchedElement,
   currentPlugin: IInterface;
   modelName: string;
@@ -47,8 +50,8 @@ begin
       Inc(processed);
       
       if not Assigned(patchPlugin) then
-        patchPlugin := AddNewFile;
-      
+        patchPlugin := CreatePatchFile(pluginName);
+
       if not Assigned(patchPlugin) then
         Exit;
       
@@ -89,7 +92,7 @@ begin
     CleanMasters(patchPlugin);
     AddMessage('Patch file created. Processed ' + IntToStr(processed) + ' records: ' + IntToStr(books) + ' books, ' + IntToStr(journals) + ' journals, ' + IntToStr(notes) + ' notes. Skipped ' + IntToStr(skipped) + ' records.');
   end;
-  Result := 1;
+  Result := 0;
 end;
 
 end.
