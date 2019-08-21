@@ -1,12 +1,9 @@
 ﻿unit TSKitPatcher;
 
+uses TSKit;
 uses mteElements;
 
 // ================== Configurations ==================
-const
-  enableDebug = false;
-  allowDuplicates = true;
-  patchPluginNamePrefix = 'Dynamic Patch';
 
 
 // ================== Patcher ==================
@@ -90,46 +87,6 @@ begin
   patchRecords := TStringList.create;
 end;
 
-// ================== Utilities ==================
-
-function Split(Input: string; const Delimiter: Char; strict: boolean): TStringList;
-var
-  Strings: TStrings;
-begin
-  Strings := TStringList.create;
-  Strings.StrictDelimiter := true;
-  Strings.Delimiter := Delimiter;
-  Strings.DelimitedText := Input;
-  Result := Strings;
-end;
-
-function Stringify(element: IInterface): String;
-begin
-  Result := Name(element) + ' from ' + GetFileName(GetFile(element));
-end;
-
-procedure debug(msg: String);
-begin
-  if enableDebug then
-    AddMessage(msg);
-end;
-
-procedure printChildren(element: IwbContainer);
-var
-  child: IInterface;
-  i: integer;
-begin
-  if ElementCount(element) < 2 then
-    AddMessage(Path(element))
-  else
-  begin
-    AddMessage(Path(element));
-    for i := 0 to Pred(ElementCount(element)) do
-    begin
-      printChildren(ElementByIndex(element, i));
-    end;
-  end;
-end;
 
 // ================== Patcher Privates ==================
 
@@ -151,13 +108,13 @@ var
   j, k: Integer;
   pluginName, pluginPath: String;
 begin
-  debug('Got ' + IntToStr(ElementCount(group)) + ' records to process in ' + GetFileName(currentPlugin));
+  Debug('Got ' + IntToStr(ElementCount(group)) + ' records to process in ' + GetFileName(currentPlugin));
   for j := 0 to Pred(ElementCount(group)) do
   begin
     overrideElement := ElementByIndex(group, j);
-    debug('Looking for override of ' + Stringify(overrideElement));
+    Debug('Looking for override of ' + Stringify(overrideElement));
     overrideElement := WinningOverride(overrideElement);
-    debug('Processing ' + Stringify(overrideElement));
+    Debug('Processing ' + Stringify(overrideElement));
     Inc(processed);
     //    if IsPatcherElement(overrideElement) then begin
     //      debug('Skipping ' + Stringify(overrideElement));
@@ -165,28 +122,19 @@ begin
     //      continue;
     //    end;
     if not ShouldBePatched(overrideElement) then begin
-      debug('Skipping ' + Stringify(overrideElement));
+      Debug('Skipping ' + Stringify(overrideElement));
       Inc(skipped);
       continue;
     end;
     
-    if not Assigned(patchPlugin) then begin
-      if patchPluginName = '' then
-        patchPluginName := patchSignature;
-      
-      patchPluginName := patchPluginNamePrefix + ' - ' + patchPluginName;
-      if allowDuplicates then
-        patchPluginName := patchPluginName + ' - ' + FormatDateTime('hhmmsszzz', Now);
-      patchPluginName := patchPluginName + '.esp';
-      patchPlugin := AddNewFileName(patchPluginName, True);
-    end;
-    
+    if not Assigned(patchPlugin) then
+      patchPlugin := CreatePatchFile(patchPluginName);
     if not Assigned(patchPlugin) then
       Exit;
     
     AddRequiredElementMasters(overrideElement, patchPlugin, False);
     patchedElement := wbCopyElementToFile(overrideElement, patchPlugin, False, True);
-    debug('Copying ' + Stringify(overrideElement));
+    Debug('Copying ' + Stringify(overrideElement));
     Inc(copied);
     wasPatched := false;
     for k := 0 to Pred(patchRecords.Count) do
@@ -194,7 +142,7 @@ begin
       pluginPath := PatcherPluginPathByIndex(k);
       pluginName := PatcherPluginNameByIndex(k);      
       patcherElement := GetPatcherElement(pluginName, overrideElement);
-      debug('Patching ' + Stringify(patcherElement));
+      Debug('Patching ' + Stringify(patcherElement));
       if not Assigned(patcherElement) then continue;
       if not wasPatched then
         Inc(patched);
@@ -215,9 +163,9 @@ begin
   if FlagValues(elementAtPath) <> '' then begin
     fromVal := GetNativeValue(elementAtPath);
     toVal := GetNativeValue(ElementByPath(patchedElement, path));
-    debug('From ' + IntToStr(fromVal));
-    debug('To ' + IntToStr(toVal));
-    debug('Res ' + IntToStr(fromVal or toVal));
+    Debug('From ' + IntToStr(fromVal));
+    Debug('To ' + IntToStr(toVal));
+    Debug('Res ' + IntToStr(fromVal or toVal));
     SetNativeValue(ElementByPath(patchedElement, path), fromVal or toVal);
   end
   else begin

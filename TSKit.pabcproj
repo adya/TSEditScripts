@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project FileVersion="2" Name="TSKit" MainFile="TSKit.pas" OutputFileName="TSKit.exe" OutputDirectory="" ProjectType="ConsoleApp" IncludeDebugInfo="True" GenerateXMLDoc="False" CommandLineArguments="" AppIcon="" DeleteEXE="True" DeletePDB="True" Product="" Company="" Trademark="" Copyright="" Title="" Description="" MajorVersion="0" MinorVersion="0" BuildVersion="0" RevisionVersion="0">
+  <Items>
+    <Item Type="SourceFile" Name="TSKit.pas" Path="TSKit.pas" />
+    <Item Type="SourceFile" Name="TSKit.Patcher.Books.pas" Path="TSKit.Patcher.Books.pas" />
+    <Item Type="SourceFile" Name="TSKit.Patcher.Light.pas" Path="TSKit.Patcher.Light.pas" />
+    <Item Type="SourceFile" Name="TSKit.Patcher.pas" Path="TSKit.Patcher.pas" />
+    <Item Type="SourceFile" Name="TSKit.ReWeight.Books.pas" Path="TSKit.ReWeight.Books.pas" />
+    <Item Type="SourceFile" Name="TSKit.ReWeight.Scrolls.pas" Path="TSKit.ReWeight.Scrolls.pas" />
+    <Item Type="SourceFile" Name="TSKit.Print.pas" Path="TSKit.Print.pas" />
+    <Item Type="Reference" AssemblyName="System" FullAssemblyName="System.dll" />
+  </Items>
+</Project>
