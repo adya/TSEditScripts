@@ -65,8 +65,8 @@ begin
     end;
     
     if Assigned(patchPlugin) then begin
-      SortMasters(patchPlugin);
       CleanMasters(patchPlugin);
+      SortMasters(patchPlugin);     
       AddMessage(patchPluginName + ' file created. Processed ' + IntToStr(processed) + ' records. Skipped ' + IntToStr(skipped) + ' records. Copied ' + IntToStr(copied) + ' records. Patched ' + IntToStr(patched) + ' records');
     end;
   finally
@@ -113,15 +113,11 @@ begin
   begin
     overrideElement := ElementByIndex(group, j);
     Debug('Looking for override of ' + Stringify(overrideElement));
-    overrideElement := WinningOverride(overrideElement);
+    overrideElement := GetPatchableWinningOverride(overrideElement);
     Debug('Processing ' + Stringify(overrideElement));
     Inc(processed);
-    //    if IsPatcherElement(overrideElement) then begin
-    //      debug('Skipping ' + Stringify(overrideElement));
-    //      Inc(skipped);
-    //      continue;
-    //    end;
-    if not ShouldBePatched(overrideElement) then begin
+    
+    if IsPatchedElement(overrideElement) or (not ShouldBePatched(overrideElement)) then begin
       Debug('Skipping ' + Stringify(overrideElement));
       Inc(skipped);
       continue;
@@ -195,8 +191,34 @@ begin
   s.Free;
 end;
 
+/// Gets WinningOverride of the element or the first one that is not a patcher plugin.
+function GetPatchableWinningOverride(element: IwbElement): IwbElement;
+var
+  master,
+  candidate: IwbElement;
+  i: integer;
+begin
+  candidate := WinningOverride(candidate);  
+  if not IsPatcherPlugin(candidate) then begin
+    Result := candidate;
+    exit;
+  end;
+  
+  master := MasterOrSelf(candidate);
+  for i := Pred(OverrideCount(master)) downto 0 do
+  begin
+    candidate := OverrideByIndex(i);
+    if not IsPatcherPlugin(candidate) then begin
+      Result := candidate;
+      exit;
+    end;
+  end;
+  
+  Result := element;
+end;
+
 /// Gets Element of the Patcher plugin if any for specified element.
-function GetPatcherElement(patcherPluginName: String; element: IInterface): IInterface;
+function GetPatcherElement(patcherPluginName: String; element: IwbElement): IwbElement;
 var
   i: integer;
   baseMaster, overrideMaster: IInterface;
@@ -213,7 +235,7 @@ begin
 end;
 
 /// Determines whether given element has master overrides from Patcher records.
-function ShouldBePatched(element: IInterface): Boolean;
+function ShouldBePatched(element: IwbElement): Boolean;
 var
   i, j: Integer;
   fileName: String;
@@ -234,7 +256,8 @@ begin
   end;
 end;
 
-function IsPatcherPlugin(f: IInterface): Boolean;
+/// Checks whether
+function IsPatcherPlugin(f: IwbFile): Boolean;
 var
   i: Integer;
   patchPluginName: String;
@@ -250,18 +273,16 @@ begin
   Result := false;
 end;
 
-/// Checks whether or not given element is from one of the patcher plugins.
-function IsPatcherElement(element: IInterface): Boolean;
+/// Checks whether or not given element is from the patch plugin.
+function IsPatchedElement(element: IwbElement): Boolean;
 var
   i: integer;
-  patchPluginName: String;
   f: IInterface;
 begin
   for i := 0 to Pred(patchRecords.Count) do
   begin
-    patchPluginName := PatcherPluginNameByIndex(i);
     f := GetFile(element);
-    if GetFileName(f) = patchPluginName then begin
+    if Equals(f, patchPlugin) then begin
       Result := true;
       Exit;
     end;
