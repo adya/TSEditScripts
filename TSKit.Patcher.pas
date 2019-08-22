@@ -128,7 +128,7 @@ begin
     if not Assigned(patchPlugin) then
       Exit;
     
-    AddRequiredElementMasters(overrideElement, patchPlugin, False);
+    AddMasters(overrideElement, patchPlugin);
     patchedElement := wbCopyElementToFile(overrideElement, patchPlugin, False, True);
     Debug('Copying ' + Stringify(overrideElement));
     Inc(copied);
@@ -165,7 +165,7 @@ begin
     SetNativeValue(ElementByPath(patchedElement, path), fromVal or toVal);
   end
   else begin
-    AddRequiredElementMasters(patcherElement, patchPlugin, False);
+    AddMasters(patcherElement, patchPlugin);
     wbCopyElementToRecord(elementAtPath, patchedElement, false, true);
   end;
 end;
@@ -290,4 +290,14 @@ begin
   Result := false;
 end;
 
+
+procedure AddMasters(originalElement: IwbElement; destination: IwbFile);
+var
+  i: integer;
+  originalFile: IwbFile;
+begin
+  originalFile := GetFile(originalElement);
+  for i := 0 to Pred(MasterCount(originalFile)) do
+    AddMasterIfMissing(destination, GetFileName(MasterByIndex(originalFile, i)));
+end;
 end.
