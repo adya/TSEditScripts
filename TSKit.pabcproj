@@ -8,6 +8,7 @@
     <Item Type="SourceFile" Name="TSKit.ReWeight.Books.pas" Path="TSKit.ReWeight.Books.pas" />
     <Item Type="SourceFile" Name="TSKit.ReWeight.Scrolls.pas" Path="TSKit.ReWeight.Scrolls.pas" />
     <Item Type="SourceFile" Name="TSKit.Print.pas" Path="TSKit.Print.pas" />
+    <Item Type="SourceFile" Name="TSKit.Patcher.RegionNames.pas" Path="TSKit.Patcher.RegionNames.pas" />
     <Item Type="Reference" AssemblyName="System" FullAssemblyName="System.dll" />
   </Items>
 </Project>
