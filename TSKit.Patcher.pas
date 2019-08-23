@@ -195,10 +195,11 @@ end;
 function GetPatchableWinningOverride(element: IwbElement): IwbElement;
 var
   master,
+  overriden,
   candidate: IwbElement;
   i: integer;
 begin
-  candidate := WinningOverride(candidate);  
+  overriden := WinningOverride(element);  
   if not IsPatcherPlugin(candidate) then begin
     Result := candidate;
     exit;
@@ -207,14 +208,14 @@ begin
   master := MasterOrSelf(candidate);
   for i := Pred(OverrideCount(master)) downto 0 do
   begin
-    candidate := OverrideByIndex(i);
-    if not IsPatcherPlugin(candidate) then begin
+    candidate := OverrideByIndex(master, i);
+    if not IsPatcherPlugin(candidate) and not IsBethesdaMaster(candidate) then begin
       Result := candidate;
       exit;
     end;
   end;
   
-  Result := element;
+  Result := overriden;
 end;
 
 /// Gets Element of the Patcher plugin if any for specified element.
@@ -256,7 +257,7 @@ begin
   end;
 end;
 
-/// Checks whether
+/// Checks whether given file is registered as patcher plugin.
 function IsPatcherPlugin(f: IwbFile): Boolean;
 var
   i: Integer;
@@ -271,6 +272,30 @@ begin
     end;
   end;
   Result := false;
+end;
+
+/// Checks whether given file is one of official Bethesda master plugins.
+function IsBethesdaMaster(f: IwbFile): Boolean;
+var
+  i: Integer;
+  bethesdaMasterName: string;
+  bethesdaMasters: TStringList;
+begin
+  
+  bethesdaMasters := Split('Skyrim.esm,Update.esm,Dawnguard.esm,Dragonborn.esm,HearthFires.esm', ',', true);
+  try
+    for i := 0 to Pred(bethesdaMasters.Count) do
+    begin
+      bethesdaMasterName := bethesdaMasters[i];
+      if GetFileName(f) = bethesdaMasterName then begin
+        Result := true;
+        Exit;
+      end;
+    end;
+    Result := false;
+  finally
+    bethesdaMasters.Free;
+  end;
 end;
 
 /// Checks whether or not given element is from the patch plugin.
