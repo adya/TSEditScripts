@@ -10,6 +10,7 @@
     <Item Type="SourceFile" Name="TSKit.Print.pas" Path="TSKit.Print.pas" />
     <Item Type="SourceFile" Name="TSKit.Patcher.RegionNames.pas" Path="TSKit.Patcher.RegionNames.pas" />
     <Item Type="SourceFile" Name="TSKit.Patcher.Factions.pas" Path="TSKit.Patcher.Factions.pas" />
+    <Item Type="SourceFile" Name="TSKit.Patcher.Scrolls.pas" Path="TSKit.Patcher.Scrolls.pas" />
     <Item Type="Reference" AssemblyName="System" FullAssemblyName="System.dll" />
   </Items>
 </Project>
