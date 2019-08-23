@@ -44,7 +44,7 @@ begin
       if not Assigned(patchPlugin) then
         Exit;
       
-      AddRequiredElementMasters(overrideElement, patchPlugin, False);
+      AddMastersSilently(overrideElement, patchPlugin);
       debug('Copying ' + Stringify(overrideElement));
       
       patchedElement := wbCopyElementToFile(overrideElement, patchPlugin, False, True);

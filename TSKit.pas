@@ -1,4 +1,4 @@
-unit TSKit;
+﻿unit TSKit;
 
 const
   enableDebug = false;
@@ -54,6 +54,21 @@ begin
     pluginName := pluginName + ' - ' + FormatDateTime('hhmmsszzz', Now);
   pluginName := pluginName + '.esp';
   Result := AddNewFileName(pluginName, True);
+end;
+
+procedure AddMastersSilently(originalElement: IwbElement; destination: IwbFile);
+var
+  i: integer;
+  originalFile: IwbFile;
+begin
+  originalFile := GetFile(originalElement);
+  Debug('Adding master ' + GetFileName(originalFile) + ' to ' + GetFileName(destination));
+  AddMasterIfMissing(destination, GetFileName(originalFile));
+  for i := 0 to Pred(MasterCount(originalFile)) do
+  begin
+    Debug('Adding master ' + GetFileName(originalFile) + ' to ' + GetFileName(destination));
+    AddMasterIfMissing(destination, GetFileName(MasterByIndex(originalFile, i)));
+  end;
 end;
 
 end.
