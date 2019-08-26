@@ -18,7 +18,7 @@ end;
 
 function Stringify(element: IInterface): String;
 begin
-  Result := Name(element) + ' from ' + GetFileName(GetFile(element));
+  Result := Name(element) + ' | at ' + FullPath(element) + ' | from ' + GetFileName(GetFile(element));
 end;
 
 procedure Debug(msg: String);

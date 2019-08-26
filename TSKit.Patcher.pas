@@ -23,10 +23,13 @@ end;
 procedure Patch(signature, pluginName: String);
 var
   group,
+  world,
   block,
   subBlock,
+  cell,
+  cellChildren,
   currentPlugin: IInterface;
-  processed, skipped, patched, copied, i, j, k: Integer;
+  processed, skipped, patched, copied, i, j, k, z, x: Integer;
 begin
   processed := 0;
   skipped := 0;
@@ -44,24 +47,30 @@ begin
     begin
       currentPlugin := FileByIndex(i);
       
-      if IsPatcherPlugin(currentPlugin) then continue;
+      if IsPatcherPlugin(currentPlugin) or IsBethesdaMaster(currentPlugin) then continue;
       
       group := GroupBySignature(currentPlugin, signature);
-      
       if signature = 'CELL' then begin
-        for j := 0 to ElementCount(group) do
+        for j := 0 to Pred(ElementCount(group)) do
         begin
           block := ElementByIndex(group, j);
-          for k := 0 to ElementCount(block) do
+          for k := 0 to Pred(ElementCount(block)) do
           begin
             subBlock := ElementByIndex(block, k);
-            PatchGroup(subBlock, currentPlugin, processed, skipped, copied, patched);    
+            ProcessGroup(subBlock, currentPlugin, processed, skipped, copied, patched);    
           end;
         end;
       end
+      else if signature = 'WRLD' then begin
+        for x := 0 to Pred(ElementCount(group)) do
+        begin
+          world := ElementByIndex(group, x);
+          ProcessCell(ChildGroup(world), currentPlugin, processed, skipped, copied, patched);
+        end;
+      end
       else begin
-        PatchGroup(group, currentPlugin, processed, skipped, copied, patched);
-      end;
+        ProcessGroup(group, currentPlugin, processed, skipped, copied, patched);
+      end;  
     end;
     
     if Assigned(patchPlugin) then begin
@@ -99,53 +108,78 @@ var
   patchSignature,
   patchPluginName: string;
 
-procedure PatchGroup(group, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
+procedure ProcessCell(e, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
 var
-  overrideElement,
+  i: integer;
+begin
+  if ElementType(e) = etMainRecord then begin
+    if Signature(e) = 'CELL' then
+      ProcessElement(e, currentPlugin, processed, skipped, copied, patched);   
+  end
+  else begin
+    // don't step into Cell Children, no CELLs there
+    if GroupType(e) = 6 then
+      Exit;
+    
+    for i := 0 to Pred(ElementCount(e)) do
+      ProcessCell(ElementByIndex(e, i), currentPlugin, processed, skipped, copied, patched);
+  end;
+end;
+
+procedure ProcessGroup(group, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
+var
+  j: Integer;
+begin
+  Debug('Got ' + IntToStr(ElementCount(group)) + ' records to process in ' + GetFileName(currentPlugin));
+  for j := 0 to Pred(ElementCount(group)) do
+    ProcessElement(ElementByIndex(group, j), processed, skipped, copied, patched);
+end;
+
+procedure ProcessElement(overrideElement, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
+var
   patcherElement,
   patchedElement: IInterface;
   wasPatched: Boolean;
   j, k: Integer;
   pluginName, pluginPath: String;
 begin
-  Debug('Got ' + IntToStr(ElementCount(group)) + ' records to process in ' + GetFileName(currentPlugin));
-  for j := 0 to Pred(ElementCount(group)) do
+  Debug('Looking for override of ' + Stringify(overrideElement));
+  overrideElement := GetPatchableWinningOverride(overrideElement);
+  if not Assigned(overrideElement) then begin
+    Exit;
+  end;
+  
+  Debug('Processing ' + Stringify(overrideElement));
+  Inc(processed);
+  
+  if IsPatchedElement(overrideElement) or not ShouldBePatched(overrideElement) then begin
+    Debug('Skipping ' + Stringify(overrideElement));
+    Inc(skipped);
+    Exit;
+  end;
+  
+  if not Assigned(patchPlugin) then
+    patchPlugin := CreatePatchFile(patchPluginName);
+  if not Assigned(patchPlugin) then
+    Exit;
+  
+  AddMastersSilently(overrideElement, patchPlugin);
+  patchedElement := wbCopyElementToFile(overrideElement, patchPlugin, False, True);
+  Debug('Copying ' + Stringify(overrideElement));
+  Inc(copied);
+  wasPatched := false;
+  for k := 0 to Pred(patchRecords.Count) do
   begin
-    overrideElement := ElementByIndex(group, j);
-    Debug('Looking for override of ' + Stringify(overrideElement));
-    overrideElement := GetPatchableWinningOverride(overrideElement);
-    Debug('Processing ' + Stringify(overrideElement));
-    Inc(processed);
+    pluginPath := PatcherPluginPathByIndex(k);
+    pluginName := PatcherPluginNameByIndex(k);      
+    patcherElement := GetPatcherElement(pluginName, overrideElement);
+    Debug('Patching ' + Stringify(patcherElement));
+    if not Assigned(patcherElement) then continue;
+    if not wasPatched then
+      Inc(patched);
     
-    if IsPatchedElement(overrideElement) or (not ShouldBePatched(overrideElement)) then begin
-      Debug('Skipping ' + Stringify(overrideElement));
-      Inc(skipped);
-      continue;
-    end;
-    
-    if not Assigned(patchPlugin) then
-      patchPlugin := CreatePatchFile(patchPluginName);
-    if not Assigned(patchPlugin) then
-      Exit;
-    
-    AddMastersSilently(overrideElement, patchPlugin);
-    patchedElement := wbCopyElementToFile(overrideElement, patchPlugin, False, True);
-    Debug('Copying ' + Stringify(overrideElement));
-    Inc(copied);
-    wasPatched := false;
-    for k := 0 to Pred(patchRecords.Count) do
-    begin
-      pluginPath := PatcherPluginPathByIndex(k);
-      pluginName := PatcherPluginNameByIndex(k);      
-      patcherElement := GetPatcherElement(pluginName, overrideElement);
-      Debug('Patching ' + Stringify(patcherElement));
-      if not Assigned(patcherElement) then continue;
-      if not wasPatched then
-        Inc(patched);
-      
-      PatchElement(patchedElement, patcherElement, patchPlugin, pluginPath);
-      wasPatched := true;
-    end;
+    PatchElement(patchedElement, patcherElement, patchPlugin, pluginPath);
+    wasPatched := true;
   end;
 end;
 
@@ -191,15 +225,14 @@ begin
   s.Free;
 end;
 
-/// Gets WinningOverride of the element or the first one that is not a patcher plugin.
+/// Gets WinningOverride of the element or the first one that is not a patcher plugin and not an official master.
 function GetPatchableWinningOverride(element: IwbElement): IwbElement;
 var
   master,
-  overriden,
   candidate: IwbElement;
   i: integer;
 begin
-  overriden := WinningOverride(element);  
+  candidate := WinningOverride(element);  
   if not IsPatcherPlugin(candidate) then begin
     Result := candidate;
     exit;
@@ -214,8 +247,6 @@ begin
       exit;
     end;
   end;
-  
-  Result := overriden;
 end;
 
 /// Gets Element of the Patcher plugin if any for specified element.
@@ -236,25 +267,42 @@ begin
 end;
 
 /// Determines whether given element has master overrides from Patcher records.
+/// Should be patched if:
+/// 1) Has overriden record in one of the patcher plugins.
+/// 2) Has overriden record from other plugins which are not official masters.
+/// 3) Such overriden record is not ITM.
 function ShouldBePatched(element: IwbElement): Boolean;
 var
   i, j: Integer;
-  fileName: String;
-  baseMaster, overrideMaster: IInterface;
-begin
   
+  // 1
+  hasPatcher,
+  // 2/3
+  hasPatchable: boolean;
+  fileName: String;
+  baseMaster, overrideMaster: IwbElement;
+begin
+  // 1
   baseMaster := MasterOrSelf(element);
+  debug('Searching for patchers of ' + Stringify(element) + '...');
+  debug('Analyzing ' + IntToStr(OverrideCount(baseMaster)) + ' overrides');
   for i := 0 to Pred(OverrideCount(baseMaster)) do
   begin
     overrideMaster := OverrideByIndex(baseMaster, i);
-    for j := 0 to Pred(patchRecords.Count) do
-    begin
-      if GetFileName(GetFile(overrideMaster)) = PatcherPluginNameByIndex(j) then begin
-        Result := true;
-        Exit;
-      end;
-    end;	
+    debug('Analyzing ' + Stringify(overrideMaster) + ' record');
+    if not hasPatcher and IsPatcherPlugin(GetFile(overrideMaster)) then begin
+      Debug(Stringify(element) + ' has patcher: ' + Stringify(overrideMaster));
+      hasPatcher := true;
+    end;
+    
+    // 2
+    //    if not hasPatchable and true then begin
+    //      hasPatchable := true;
+    //    end;
   end;
+  hasPatchable := true; // not supported yet.
+  Result := hasPatchable and hasPatcher;
+  
 end;
 
 /// Checks whether given file is registered as patcher plugin.
