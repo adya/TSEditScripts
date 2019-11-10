@@ -2,9 +2,10 @@
 
 uses TSKit;
 uses mteElements;
-
-// ================== Configurations ==================
-
+uses mteFiles;
+// ================== Glossary ==================
+// * PatchPlugin - plugin into which all results are written
+// * PatcherPlugin - plugin records of which should be retained in patch plugin
 
 // ================== Patcher ==================
 
@@ -19,7 +20,7 @@ begin
   AddMessage('Registered ' + recordPath + ' from ' + sourcePluginName);
 end;
 
-/// Creates a patch for all loaded plugins using
+/// Creates a patch for all loaded plugins using configured patchers.
 procedure Patch(signature, pluginName: String);
 var
   group,
@@ -30,6 +31,7 @@ var
   cellChildren,
   currentPlugin: IInterface;
   processed, skipped, patched, copied, i, j, k, z, x: Integer;
+  patcherList: TStringList;
 begin
   processed := 0;
   skipped := 0;
@@ -42,12 +44,11 @@ begin
   end;
   patchSignature := signature;
   patchPluginName := pluginName;
+  patcherList := PatcherPlugins;
   try
-    for i := 0 to Pred(FileCount) do
+    for i := 0 to Pred(patcherList.Count) do
     begin
-      currentPlugin := FileByIndex(i);
-      
-      if IsPatcherPlugin(currentPlugin) or IsBethesdaMaster(currentPlugin) then continue;
+      currentPlugin := FileByName(patcherList[i]);
       
       group := GroupBySignature(currentPlugin, signature);
       if signature = 'CELL' then begin
@@ -99,11 +100,7 @@ end;
 
 // ================== Patcher Privates ==================
 
-const
-  recordsDelimiter = '@';
-
 var
-  patchRecords: TStringList;
   patchPlugin: IInterface;
   patchSignature,
   patchPluginName: string;
@@ -132,7 +129,7 @@ var
 begin
   Debug('Got ' + IntToStr(ElementCount(group)) + ' records to process in ' + GetFileName(currentPlugin));
   for j := 0 to Pred(ElementCount(group)) do
-    ProcessElement(ElementByIndex(group, j), processed, skipped, copied, patched);
+    ProcessElement(ElementByIndex(group, j), currentPlugin, processed, skipped, copied, patched);
 end;
 
 procedure ProcessElement(overrideElement, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
@@ -146,13 +143,15 @@ begin
   Debug('Looking for override of ' + Stringify(overrideElement));
   overrideElement := GetPatchableWinningOverride(overrideElement);
   if not Assigned(overrideElement) then begin
+    Inc(skipped);
+    Debug('Skipping ' + Stringify(overrideElement) + ' - no conflicts');
     Exit;
   end;
   
   Debug('Processing ' + Stringify(overrideElement));
   Inc(processed);
   
-  if IsPatchedElement(overrideElement) or not ShouldBePatched(overrideElement) then begin
+  if IsPatchedElement(overrideElement) then begin
     Debug('Skipping ' + Stringify(overrideElement));
     Inc(skipped);
     Exit;
@@ -204,49 +203,14 @@ begin
   end;
 end;
 
-
-function PatcherPluginPathByIndex(index: Integer): String;
-var
-  s: TStrings;
-begin
-  s := Split(patchRecords[index], recordsDelimiter, true);
-  if s.Count > 1 then
-    Result := s[1];
-  s.Free;
-end;
-
-function PatcherPluginNameByIndex(index: Integer): String;
-var
-  s: TStrings;
-begin
-  s := Split(patchRecords[index], recordsDelimiter, true);
-  if s.Count > 0 then
-    Result := s[0];
-  s.Free;
-end;
-
-/// Gets WinningOverride of the element or the first one that is not a patcher plugin and not an official master.
+/// Gets WinningOverride of the element if its not a patcher plugin nor a patch plugin.
 function GetPatchableWinningOverride(element: IwbElement): IwbElement;
 var
-  master,
   candidate: IwbElement;
-  i: integer;
 begin
   candidate := WinningOverride(element);  
-  if not IsPatcherPlugin(candidate) then begin
+  if not IsPatcherPlugin(candidate) then
     Result := candidate;
-    exit;
-  end;
-  
-  master := MasterOrSelf(candidate);
-  for i := Pred(OverrideCount(master)) downto 0 do
-  begin
-    candidate := OverrideByIndex(master, i);
-    if not IsPatcherPlugin(candidate) and not IsBethesdaMaster(candidate) then begin
-      Result := candidate;
-      exit;
-    end;
-  end;
 end;
 
 /// Gets Element of the Patcher plugin if any for specified element.
@@ -305,22 +269,6 @@ begin
   
 end;
 
-/// Checks whether given file is registered as patcher plugin.
-function IsPatcherPlugin(f: IwbFile): Boolean;
-var
-  i: Integer;
-  patchPluginName: String;
-begin
-  for i := 0 to Pred(patchRecords.Count) do
-  begin
-    patchPluginName := PatcherPluginNameByIndex(i);
-    if GetFileName(f) = patchPluginName then begin
-      Result := true;
-      Exit;
-    end;
-  end;
-  Result := false;
-end;
 
 /// Checks whether given file is one of official Bethesda master plugins.
 function IsBethesdaMaster(f: IwbFile): Boolean;
@@ -348,19 +296,69 @@ end;
 
 /// Checks whether or not given element is from the patch plugin.
 function IsPatchedElement(element: IwbElement): Boolean;
+var f: IInterface;
+begin
+    f := GetFile(element);
+    Result := Equals(f, patchPlugin);
+end;
+
+
+// ================== Patcher Records ==================
+
+const
+  recordsDelimiter = '@';
 var
-  i: integer;
-  f: IInterface;
+  patchRecords: TStringList;
+
+/// Checks whether given file is registered as patcher plugin.
+function IsPatcherPlugin(f: IwbFile): Boolean;
+var
+  i: Integer;
+  patchPluginName: String;
 begin
   for i := 0 to Pred(patchRecords.Count) do
   begin
-    f := GetFile(element);
-    if Equals(f, patchPlugin) then begin
+    patchPluginName := PatcherPluginNameByIndex(i);
+    if GetFileName(f) = patchPluginName then begin
       Result := true;
       Exit;
     end;
   end;
   Result := false;
 end;
+
+/// Returns unique patcher plugin names that has been configured.
+function PatcherPlugins: TStringList;
+var names: TStringList;
+i: integer;
+begin
+  names := TStringList.Create;
+  names.Duplicates := dupIgnore;
+  for i:=0 to Pred(patchRecords.Count) do begin
+    names.Add(PatcherPluginNameByIndex(i));
+  end;
+  Result := names;
+end;
+
+function PatcherPluginPathByIndex(index: Integer): String;
+var
+  s: TStrings;
+begin
+  s := Split(patchRecords[index], recordsDelimiter, true);
+  if s.Count > 1 then
+    Result := s[1];
+  s.Free;
+end;
+
+function PatcherPluginNameByIndex(index: Integer): String;
+var
+  s: TStrings;
+begin
+  s := Split(patchRecords[index], recordsDelimiter, true);
+  if s.Count > 0 then
+    Result := s[0];
+  s.Free;
+end;
+
 
 end.

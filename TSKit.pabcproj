@@ -11,6 +11,15 @@
     <Item Type="SourceFile" Name="TSKit.Patcher.RegionNames.pas" Path="TSKit.Patcher.RegionNames.pas" />
     <Item Type="SourceFile" Name="TSKit.Patcher.Factions.pas" Path="TSKit.Patcher.Factions.pas" />
     <Item Type="SourceFile" Name="TSKit.Patcher.Scrolls.pas" Path="TSKit.Patcher.Scrolls.pas" />
+    <Item Type="SourceFile" Name="TSKit.Patcher.BFWF.pas" Path="TSKit.Patcher.BFWF.pas" />
+    <Item Type="SourceFile" Name="TSKit.Patcher.Trees.pas" Path="TSKit.Patcher.Trees.pas" />
+    <Item Type="SourceFile" Name="TSKit.Fix.ENBDecals.pas" Path="TSKit.Fix.ENBDecals.pas" />
+    <Item Type="SourceFile" Name="mteBase.pas" Path="mteBase.pas" />
+    <Item Type="SourceFile" Name="mteElements.pas" Path="mteElements.pas" />
+    <Item Type="SourceFile" Name="mteFiles.pas" Path="mteFiles.pas" />
+    <Item Type="SourceFile" Name="mteFunctions.pas" Path="mteFunctions.pas" />
+    <Item Type="SourceFile" Name="mteSystem.pas" Path="mteSystem.pas" />
+    <Item Type="SourceFile" Name="mteTypes.pas" Path="mteTypes.pas" />
     <Item Type="Reference" AssemblyName="System" FullAssemblyName="System.dll" />
   </Items>
 </Project>

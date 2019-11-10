@@ -1,11 +1,11 @@
-﻿unit TSKitPatcherScrolls;
+﻿unit TSKitPatcherBlacksmithWaterFix;
 uses 'TSKit.Patcher';
 
 //==============================================================================
 function Initialize: integer;
-begin
-  AddRecord('Unofficial Skyrim Special Edition Patch.esp', 'KWDA - Keywords');
-  Patch('SCRL', 'Scrolls');
+begin  
+  AddRecord('Blacksmith Forge Water Fix SE USSEP.esp', 'DATA - Flags');
+  Patch('CELL', 'BFWF');
   Result := 0;
 end;
 
