@@ -1,38 +1,58 @@
-﻿unit TSKitReWeightBooks;
+﻿unit TSKit.NoiseCancellation;
 
 uses TSKit;
 uses 'TSKit.Patcher';
 
 const
 
-  pluginName = 'ReWeight.Books';
-  
-  /// Books and diaries
-  bookWeight = 0.5;
-  
-  /// Journals
-  journalWeight = 0.3;
-  
-  /// Notes, Recipes, Letters
-  noteWeight = 0.1;
+  pluginName = 'NoiseCancellation';
 
+/// Cancels "noise" (e.g. conflicts of meaningless records) in records with specified signature.
+//procedure Denoise(signature, noise: string);
 function Initialize: integer;
+begin
 var
   patchPlugin: IInterface;
+  baseFiles: TStringList;
   group,
   overrideElement,
   element,
   patchedElement,
   currentPlugin: IInterface;
-  modelName: string;
-  weight: Float;
-  processed, skipped, books, notes, journals, i, j, k: Integer;
+  processed, skipped, i, j, k: Integer;
 begin
-  for i := 0 to Pred(FileCount) do
+  
+  baseFiles := BethesdaMasters();
+  baseFiles.Add('Unofficial Skyrim Special Edition Patch.esp');
+  try
+  
+  for i := 0 to Pred(baseFiles.Count) do
   begin
-    currentPlugin := FileByIndex(i);
-    group := GroupBySignature(currentPlugin, 'BOOK');
-    for j := 0 to Pred(ElementCount(group)) do
+    currentPlugin := FileByName(baseFiles[i]);
+    group := GroupBySignature(currentPlugin, 'WRLD');
+    if Assigned(group) then
+      Denoise(group, 'MHDT');
+    group := GroupBySignature(currentPlugin, 'CELL');
+    if Assigned(group) then
+      Denoise(group, 'XCLW');
+  Result := 0;
+  finally
+    baseFiles.Free; 
+  end;
+end;
+
+procedure Denoise(group: IInterface, path: string);
+var
+ patchPlugin: IInterface;
+  baseFiles: TStringList;
+  group,
+  overrideElement,
+  element,
+  patchedElement,
+  currentPlugin: IInterface;
+j, k: Integer;
+begin
+  for j := 0 to Pred(ElementCount(group)) do
     begin
       overrideElement := ElementByIndex(group, j);
       
@@ -92,7 +112,6 @@ begin
     CleanMasters(patchPlugin);
     AddMessage('Patch file created. Processed ' + IntToStr(processed) + ' records: ' + IntToStr(books) + ' books, ' + IntToStr(journals) + ' journals, ' + IntToStr(notes) + ' notes. Skipped ' + IntToStr(skipped) + ' records.');
   end;
-  Result := 0;
-end;
+ end;
 
 end.

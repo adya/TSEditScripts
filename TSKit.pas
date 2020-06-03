@@ -44,16 +44,24 @@ begin
   end;
 end;
 
-function CreatePatchFile(pluginName: string): IwbFile;
+function PatchFileName(pluginName: string): string;
 begin
+  Result := '';
   if pluginName = '' then
     Exit;
-  
   pluginName := patchPluginNamePrefix + ' - ' + pluginName;
   if allowDuplicates then
     pluginName := pluginName + ' - ' + FormatDateTime('hhmmsszzz', Now);
   pluginName := pluginName + '.esp';
-  Result := AddNewFileName(pluginName, True);
+  Result := pluginName;
+end;
+
+function CreatePatchFile(pluginName: string): IwbFile;
+begin
+  if pluginName = '' then
+    Exit;
+
+  Result := AddNewFileName(PatchFileName(pluginName), True);
 end;
 
 procedure AddMastersSilently(originalElement: IwbElement; destination: IwbFile);
@@ -102,6 +110,33 @@ end;
 function HasFlag(flags: IElement; flagName: String): boolean;
 begin
   Result := Assigned(ElementByPath(flags, flagName));
+end;
+
+function BethesdaMasters(): TStringList;
+begin
+  Result: = Split('Skyrim.esm,Update.esm,Dawnguard.esm,Dragonborn.esm,HearthFires.esm', ',', true);
+end;
+
+/// Checks whether given file is one of official Bethesda master plugins.
+function IsBethesdaMaster(f: IwbFile): Boolean;
+var
+  i: Integer;
+  bethesdaMasterFiles: TStringList;
+begin
+  
+  bethesdaMasterFiles := BethesdaMasters();
+  try
+    for i := 0 to Pred(bethesdaMasterFiles.Count) do
+    begin
+      if GetFileName(f) = bethesdaMasterFiles[i] then begin
+        Result := true;
+        Exit;
+      end;
+    end;
+    Result := false;
+  finally
+    bethesdaMasterFiles.Free;
+  end;
 end;
 
 end.

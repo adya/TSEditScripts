@@ -1,13 +1,17 @@
-﻿unit TSKitPatcherRegionNames;
+unit TSKitPatcherRegionNames;
 uses 'TSKit.Patcher';
 
 //==============================================================================
 function Initialize: integer;
 begin
-  AddRecord('Unique Region Names.esp', 'XCLR - Regions');
+  AddRecord('SkyfallEstateBuildable.esp', 'XLCN - Location');
+  AddRecord('Oakwood.esp', 'XLCN - Location');
+  AddRecord('Gavorstead.esp', 'XLCN - Location');
+  AddRecord('Forgotten DungeonsSSE.esm', 'XLCN - Location');
+  AddRecord('Improved Adoptions MERGED.esp', 'XLCN - Location');
+  AddRecord('Alternate Start - Live Another Life.esp', 'XLCN - Location');
   AddRecord('Unofficial Skyrim Special Edition Patch', 'XLCN - Location');
-  AddRecord('HammetDungeons.esm', 'XLCN - Location');
-  AddRecord('Unique Region Names.esp', 'XLCN - Location');
+
   Patch('WRLD', 'Locations');
   Result := 0;
 end;

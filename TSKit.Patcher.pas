@@ -11,6 +11,8 @@ uses mteFiles;
 
 /// Adds an element of specified plugin at given path as a reference value
 /// that patcher will use in resulting patch.
+/// Patcher uses the same order as records are added, 
+/// so when multiple records exist in different patcher plugins the last one will take priority.
 procedure AddRecord(sourcePluginName: String; recordPath: String);
 begin
   if not Assigned(patchRecords) then begin
@@ -21,6 +23,7 @@ begin
 end;
 
 /// Creates a patch for all loaded plugins using configured patchers.
+/// Resets itself afterwards.
 procedure Patch(signature, pluginName: String);
 var
   group,
@@ -28,8 +31,7 @@ var
   block,
   subBlock,
   cell,
-  cellChildren,
-  currentPlugin: IInterface;
+  cellChildren: IInterface;
   processed, skipped, patched, copied, i, j, k, z, x: Integer;
   patcherList: TStringList;
 begin
@@ -58,7 +60,7 @@ begin
           for k := 0 to Pred(ElementCount(block)) do
           begin
             subBlock := ElementByIndex(block, k);
-            ProcessGroup(subBlock, currentPlugin, processed, skipped, copied, patched);    
+            ProcessGroup(subBlock, processed, skipped, copied, patched);    
           end;
         end;
       end
@@ -66,11 +68,11 @@ begin
         for x := 0 to Pred(ElementCount(group)) do
         begin
           world := ElementByIndex(group, x);
-          ProcessCell(ChildGroup(world), currentPlugin, processed, skipped, copied, patched);
+          ProcessCell(ChildGroup(world), processed, skipped, copied, patched);
         end;
       end
       else begin
-        ProcessGroup(group, currentPlugin, processed, skipped, copied, patched);
+        ProcessGroup(group, processed, skipped, copied, patched);
       end;  
     end;
     
@@ -101,17 +103,19 @@ end;
 // ================== Patcher Privates ==================
 
 var
+  currentPlugin,
   patchPlugin: IInterface;
   patchSignature,
   patchPluginName: string;
 
-procedure ProcessCell(e, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
+/// Traverses cell element recursively to find all nested cells that needs patching.
+procedure ProcessCell(e: IInterface; var processed, skipped, copied, patched: Integer);
 var
   i: integer;
 begin
   if ElementType(e) = etMainRecord then begin
     if Signature(e) = 'CELL' then
-      ProcessElement(e, currentPlugin, processed, skipped, copied, patched);   
+      ProcessElement(e, processed, skipped, copied, patched);   
   end
   else begin
     // don't step into Cell Children, no CELLs there
@@ -119,20 +123,22 @@ begin
       Exit;
     
     for i := 0 to Pred(ElementCount(e)) do
-      ProcessCell(ElementByIndex(e, i), currentPlugin, processed, skipped, copied, patched);
+      ProcessCell(ElementByIndex(e, i), processed, skipped, copied, patched);
   end;
 end;
 
-procedure ProcessGroup(group, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
+/// Traverses group element to find any nested elements that needs patching.
+procedure ProcessGroup(group: IInterface; var processed, skipped, copied, patched: Integer);
 var
   j: Integer;
 begin
   Debug('Got ' + IntToStr(ElementCount(group)) + ' records to process in ' + GetFileName(currentPlugin));
   for j := 0 to Pred(ElementCount(group)) do
-    ProcessElement(ElementByIndex(group, j), currentPlugin, processed, skipped, copied, patched);
+    ProcessElement(ElementByIndex(group, j), processed, skipped, copied, patched);
 end;
 
-procedure ProcessElement(overrideElement, currentPlugin: IInterface; var processed, skipped, copied, patched: Integer);
+/// Examines given element to determine whether it needs patching.
+procedure ProcessElement(overrideElement: IInterface; var processed, skipped, copied, patched: Integer);
 var
   patcherElement,
   patchedElement: IInterface;
@@ -142,7 +148,7 @@ var
 begin
   Debug('Looking for override of ' + Stringify(overrideElement));
   overrideElement := GetPatchableWinningOverride(overrideElement);
-  if not Assigned(overrideElement) then begin
+  if not Assigned(overrideElement) or Equals(GetFile(overrideElement), GetFile(currentPlugin)) then begin
     Inc(skipped);
     Debug('Skipping ' + Stringify(overrideElement) + ' - no conflicts');
     Exit;
@@ -158,7 +164,11 @@ begin
   end;
   
   if not Assigned(patchPlugin) then
-    patchPlugin := CreatePatchFile(patchPluginName);
+  begin
+    patchPlugin := FileByName(PatchFileName(patchPluginName));
+    if not Assigned(patchPlugin) then
+      patchPlugin := CreatePatchFile(patchPluginName);
+  end;
   if not Assigned(patchPlugin) then
     Exit;
   
@@ -182,6 +192,7 @@ begin
   end;
 end;
 
+/// Performs patching of 'patchedElement' using 'patcherElement'.
 procedure PatchElement(patchedElement, patcherElement, patchPlugin: IInterface; path: String);
 var
   elementAtPath: IInterface;
@@ -208,9 +219,7 @@ function GetPatchableWinningOverride(element: IwbElement): IwbElement;
 var
   candidate: IwbElement;
 begin
-  candidate := WinningOverride(element);  
-  if not IsPatcherPlugin(candidate) then
-    Result := candidate;
+  Result := WinningOverride(element);  
 end;
 
 /// Gets Element of the Patcher plugin if any for specified element.
@@ -254,7 +263,7 @@ begin
   begin
     overrideMaster := OverrideByIndex(baseMaster, i);
     debug('Analyzing ' + Stringify(overrideMaster) + ' record');
-    if not hasPatcher and IsPatcherPlugin(GetFile(overrideMaster)) then begin
+    if not hasPatcher and not Equals(GetFile(overrideMaster), GetFile(currentPlugin)) then begin
       Debug(Stringify(element) + ' has patcher: ' + Stringify(overrideMaster));
       hasPatcher := true;
     end;
@@ -267,31 +276,6 @@ begin
   hasPatchable := true; // not supported yet.
   Result := hasPatchable and hasPatcher;
   
-end;
-
-
-/// Checks whether given file is one of official Bethesda master plugins.
-function IsBethesdaMaster(f: IwbFile): Boolean;
-var
-  i: Integer;
-  bethesdaMasterName: string;
-  bethesdaMasters: TStringList;
-begin
-  
-  bethesdaMasters := Split('Skyrim.esm,Update.esm,Dawnguard.esm,Dragonborn.esm,HearthFires.esm', ',', true);
-  try
-    for i := 0 to Pred(bethesdaMasters.Count) do
-    begin
-      bethesdaMasterName := bethesdaMasters[i];
-      if GetFileName(f) = bethesdaMasterName then begin
-        Result := true;
-        Exit;
-      end;
-    end;
-    Result := false;
-  finally
-    bethesdaMasters.Free;
-  end;
 end;
 
 /// Checks whether or not given element is from the patch plugin.
