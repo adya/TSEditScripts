@@ -49,7 +49,7 @@ begin
   Result := '';
   if pluginName = '' then
     Exit;
-  pluginName := patchPluginNamePrefix + ' - ' + pluginName;
+ // pluginName := patchPluginNamePrefix + ' - ' + pluginName;
   if allowDuplicates then
     pluginName := pluginName + ' - ' + FormatDateTime('hhmmsszzz', Now);
   pluginName := pluginName + '.esp';
