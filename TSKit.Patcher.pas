@@ -15,16 +15,29 @@ uses mteFiles;
 /// so when multiple records exist in different patcher plugins the last one will take priority.
 procedure AddRecord(sourcePluginName: String; recordPath: String);
 begin
+  if currentSignature = '' then begin
+    AddMessage('Signature was not set. Call StartPatching(signature) before adding records.');
+    exit;  
+  end;
+  
   if not Assigned(patchRecords) then begin
     Reset();
   end;
-  patchRecords.Add(Format('%s%s%s', [sourcePluginName, recordsDelimiter, recordPath]));
+  SerializeRecord(sourcePluginName, currentSignature, recordPath);
   AddMessage('Registered ' + recordPath + ' from ' + sourcePluginName);
+end;
+
+/// Initializes patching records for given signature.
+/// Following calls to AddRecord procedure
+/// will register provided records under that signature.
+procedure StartPatching(signature: String);
+begin
+  currentSignature := signature;
 end;
 
 /// Creates a patch for all loaded plugins using configured patchers.
 /// Resets itself afterwards.
-procedure Patch(signature, pluginName: String);
+procedure BuildPatch(pluginName: String);
 var
   group,
   world,
@@ -32,19 +45,18 @@ var
   subBlock,
   cell,
   cellChildren: IInterface;
-  processed, skipped, patched, copied, i, j, k, z, x: Integer;
+  i, j, k, z, x: Integer;
   patcherList: TStringList;
 begin
-  processed := 0;
-  skipped := 0;
-  patched := 0;
-  copied := 0;
+  counterProcessed := 0;
+  counterSkipped := 0;
+  counterPatched := 0;
+  counterCopied := 0;
   
   if signature = '' then begin
     AddMessage('Signature required');
     exit;
   end;
-  patchSignature := signature;
   patchPluginName := pluginName;
   patcherList := PatcherPlugins;
   try
@@ -60,7 +72,7 @@ begin
           for k := 0 to Pred(ElementCount(block)) do
           begin
             subBlock := ElementByIndex(block, k);
-            ProcessGroup(subBlock, processed, skipped, copied, patched);    
+            ProcessGroup(subBlock);    
           end;
         end;
       end
@@ -68,18 +80,18 @@ begin
         for x := 0 to Pred(ElementCount(group)) do
         begin
           world := ElementByIndex(group, x);
-          ProcessCell(ChildGroup(world), processed, skipped, copied, patched);
+          ProcessCell(ChildGroup(world));
         end;
       end
       else begin
-        ProcessGroup(group, processed, skipped, copied, patched);
+        ProcessGroup(group);
       end;  
     end;
     
     if Assigned(patchPlugin) then begin
       CleanMasters(patchPlugin);
       SortMasters(patchPlugin);     
-      AddMessage(patchPluginName + ' file created. Processed ' + IntToStr(processed) + ' records. Skipped ' + IntToStr(skipped) + ' records. Copied ' + IntToStr(copied) + ' records. Patched ' + IntToStr(patched) + ' records');
+      AddMessage(patchPluginName + ' file created. Processed ' + IntToStr(counterProcessed) + ' records. Skipped ' + IntToStr(counterSkipped) + ' records. Copied ' + IntToStr(counterCopied) + ' records. Patched ' + IntToStr(counterPatched) + ' records');
     end;
   finally
     Reset();
@@ -94,8 +106,9 @@ begin
   if Assigned(patchRecords) then begin
     patchRecords.Free;
   end;
-  patchSignature := '';
+  currentSignature := '';
   patchPluginName := '';
+  patchRecords.Free;
   patchRecords := TStringList.create;
 end;
 
@@ -103,19 +116,45 @@ end;
 // ================== Patcher Privates ==================
 
 var
-  currentPlugin,
+  
+  /// Plugin that is currently being processed.
+  currentPlugin: IInterface;
+  
+  /// The patch's Plugin to which all records are being copied.
   patchPlugin: IInterface;
-  patchSignature,
-  patchPluginName: string;
+  
+  /// Before BuildPatch is called: Signature for which patcher records are being added to.
+  /// During building the patch: Signature that is currently being processed.
+  currentSignature: String;
+    
+  /// Name of the patch plugin.
+  patchPluginName: String;
+  
+  /// Total number of processed records;
+  counterProcessed: Integer;
+  
+  /// Total number of skipped records;
+  counterSkipped: Integer;
+  
+  /// Total number of patched records;
+  counterPatched: Integer;
+  
+  /// Total number of copied records;
+  counterCopied: Integer;
+
+procedure ProcessSignature(signature: String);
+begin
+
+end;
 
 /// Traverses cell element recursively to find all nested cells that needs patching.
-procedure ProcessCell(e: IInterface; var processed, skipped, copied, patched: Integer);
+procedure ProcessCell(e: IInterface);
 var
   i: integer;
 begin
   if ElementType(e) = etMainRecord then begin
     if Signature(e) = 'CELL' then
-      ProcessElement(e, processed, skipped, copied, patched);   
+      ProcessElement(e);   
   end
   else begin
     // don't step into Cell Children, no CELLs there
@@ -123,22 +162,22 @@ begin
       Exit;
     
     for i := 0 to Pred(ElementCount(e)) do
-      ProcessCell(ElementByIndex(e, i), processed, skipped, copied, patched);
+      ProcessCell(ElementByIndex(e, i));
   end;
 end;
 
 /// Traverses group element to find any nested elements that needs patching.
-procedure ProcessGroup(group: IInterface; var processed, skipped, copied, patched: Integer);
+procedure ProcessGroup(group: IInterface);
 var
   j: Integer;
 begin
   Debug('Got ' + IntToStr(ElementCount(group)) + ' records to process in ' + GetFileName(currentPlugin));
   for j := 0 to Pred(ElementCount(group)) do
-    ProcessElement(ElementByIndex(group, j), processed, skipped, copied, patched);
+    ProcessElement(ElementByIndex(group, j));
 end;
 
 /// Examines given element to determine whether it needs patching.
-procedure ProcessElement(overrideElement: IInterface; var processed, skipped, copied, patched: Integer);
+procedure ProcessElement(overrideElement: IInterface);
 var
   patcherElement,
   patchedElement: IInterface;
@@ -149,17 +188,17 @@ begin
   Debug('Looking for override of ' + Stringify(overrideElement));
   overrideElement := GetPatchableWinningOverride(overrideElement);
   if not Assigned(overrideElement) or Equals(GetFile(overrideElement), GetFile(currentPlugin)) then begin
-    Inc(skipped);
+    Inc(counterSkipped);
     Debug('Skipping ' + Stringify(overrideElement) + ' - no conflicts');
     Exit;
   end;
   
   Debug('Processing ' + Stringify(overrideElement));
-  Inc(processed);
+  Inc(counterProcessed);
   
   if IsPatchedElement(overrideElement) then begin
     Debug('Skipping ' + Stringify(overrideElement));
-    Inc(skipped);
+    Inc(counterSkipped);
     Exit;
   end;
   
@@ -175,17 +214,17 @@ begin
   AddMastersSilently(overrideElement, patchPlugin);
   patchedElement := wbCopyElementToFile(overrideElement, patchPlugin, False, True);
   Debug('Copying ' + Stringify(overrideElement));
-  Inc(copied);
+  Inc(counterCopied);
   wasPatched := false;
   for k := 0 to Pred(patchRecords.Count) do
   begin
-    pluginPath := PatcherPluginPathByIndex(k);
-    pluginName := PatcherPluginNameByIndex(k);      
+    pluginPath := PatcherRecordPathAtIndex(k);
+    pluginName := PatcherPluginNameAtIndex(k);      
     patcherElement := GetPatcherElement(pluginName, overrideElement);
     Debug('Patching ' + Stringify(patcherElement));
     if not Assigned(patcherElement) then continue;
     if not wasPatched then
-      Inc(patched);
+      Inc(counterPatched);
     
     PatchElement(patchedElement, patcherElement, patchPlugin, pluginPath);
     wasPatched := true;
@@ -291,8 +330,21 @@ end;
 
 const
   recordsDelimiter = '@';
+  compositionFormat= '%s%s%s%s%s';
+  compositionSourcePluginIndex = 0;
+  compositionSignatureIndex = 1;
+  compositionRecordPathIndex = 2;
 var
   patchRecords: TStringList;
+
+/// Stores information about patcher record.
+/// - Parameter sourcePluginName: Name of the plugin which provides winning override records.
+/// - Parameter signature: Signature of the winning override records.
+/// - Parameter recordPath: Path to the records being patched.
+procedure SerializeRecord(sourcePluginName, signature, recordPath: String);
+begin
+	patchRecords.Add(Format(compositionFormat, [sourcePluginName, recordsDelimiter, currentSignature, recordsDelimiter, recordPath]));
+end;
 
 /// Checks whether given file is registered as patcher plugin.
 function IsPatcherPlugin(f: IwbFile): Boolean;
@@ -302,7 +354,7 @@ var
 begin
   for i := 0 to Pred(patchRecords.Count) do
   begin
-    patchPluginName := PatcherPluginNameByIndex(i);
+    patchPluginName := PatcherPluginNameAtIndex(i);
     if GetFileName(f) = patchPluginName then begin
       Result := true;
       Exit;
@@ -319,30 +371,31 @@ begin
   names := TStringList.Create;
   names.Duplicates := dupIgnore;
   for i:=0 to Pred(patchRecords.Count) do begin
-    names.Add(PatcherPluginNameByIndex(i));
+    names.Add(PatcherPluginNameAtIndex(i));
   end;
   Result := names;
 end;
 
-function PatcherPluginPathByIndex(index: Integer): String;
-var
-  s: TStrings;
+function PatcherRecordPathAtIndex(index: Integer): String;
 begin
-  s := Split(patchRecords[index], recordsDelimiter, true);
-  if s.Count > 1 then
-    Result := s[1];
-  s.Free;
+  Result := DeserializeComponentAtIndex(index, compositionRecordPathIndex);
 end;
 
-function PatcherPluginNameByIndex(index: Integer): String;
-var
-  s: TStrings;
+function PatcherPluginNameAtIndex(index: Integer): String;
 begin
-  s := Split(patchRecords[index], recordsDelimiter, true);
-  if s.Count > 0 then
-    Result := s[0];
-  s.Free;
+  Result := DeserializeComponentAtIndex(index, compositionRecordPathIndex);
 end;
 
+function PatcherSignatureAtIndex(index: Integer): String;
+begin
+  Result := DeserializeComponentAtIndex(index, compositionSignatureIndex);
+end;
 
+function DeserializeComponentAtIndex(patchIndex, componentIndex: Integer): String;
+var s: TStrings;
+begin
+  s := Split(patchRecords[patchIndex], recordsDelimiter, true);
+  if s.Count > componentIndex then
+    Result := s[componentIndex];
+  s.Free;
 end.
