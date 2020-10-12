@@ -1,7 +1,7 @@
 ﻿unit TSKit;
 
 const
-  enableDebug = false;
+  enableDebug = true;
   allowDuplicates = false;
   patchPluginNamePrefix = 'Dynamic Patch';
 
@@ -67,15 +67,18 @@ end;
 procedure AddMastersSilently(originalElement: IwbElement; destination: IwbFile);
 var
   i: integer;
-  originalFile: IwbFile;
+  master, originalFile: IwbFile;
 begin
   originalFile := GetFile(originalElement);
+  if GetFileName(originalFile) = GetFileName(destination) then
+	Exit;
   Debug('Adding master ' + GetFileName(originalFile) + ' to ' + GetFileName(destination));
   AddMasterIfMissing(destination, GetFileName(originalFile));
   for i := 0 to Pred(MasterCount(originalFile)) do
   begin
-    Debug('Adding master ' + GetFileName(originalFile) + ' to ' + GetFileName(destination));
-    AddMasterIfMissing(destination, GetFileName(MasterByIndex(originalFile, i)));
+	master := MasterByIndex(originalFile, i);
+    Debug('Adding master ' + GetFileName(master) + ' to ' + GetFileName(destination));
+    AddMasterIfMissing(destination, GetFileName(master));
   end;
 end;
 

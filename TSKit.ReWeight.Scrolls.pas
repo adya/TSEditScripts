@@ -1,7 +1,6 @@
 ﻿unit TSKitReWeightBooks;
 
 uses TSKit;
-uses 'TSKit.Patcher';
 
 const
   pluginName = 'ReWeight.Scrolls';

@@ -1,4 +1,4 @@
-﻿unit TSKitPatcherUnified;
+unit TSKitPatcherUnified;
 uses 'TSKit.Patcher';
 
 //==============================================================================
@@ -11,50 +11,68 @@ begin
   AddRecord('Book Covers Skyrim - Lost Library.esp', 'OBND - Object Bounds');
   AddRecord('Book Covers Skyrim - Lost Library.esp', 'MODEL');
   AddRecord('Book Covers Skyrim - Lost Library.esp', 'INAM');
-  AddRecord('Dynamic Patch - ReWeight.Books.esp', 'DATA\Weight');
-  AddRecord('Qw_BookCoversSkyrim_USSEP Patch.esp', 'OBND - Object Bounds');
-  AddRecord('Qw_BookCoversSkyrim_USSEP Patch.esp', 'MODEL');
-  AddRecord('Qw_BookCoversSkyrim_USSEP Patch.esp', 'INAM - Inventory Art');
+  AddRecord('ReWeight.Books.esp', 'DATA - Item\Weight');
+  AddRecord('ReWeight.Scrolls.esp', 'DATA - Item\Weight');
   AddRecord('MysticismMagic.esp', 'DATA\Value');
   AddRecord('MysticismMagic.esp', 'FULL - Name');
   AddRecord('MysticismMagic.esp', 'OBND - Object Bounds');
+  AddRecord('Unofficial Skyrim Special Edition Patch.esp', 'DESC - Book Text'); 
+  AddRecord('Complete Alchemy & Cooking Overhaul.esp', 'DESC - Book Text'); 
+  AddRecord('MysticismMagic.esp', 'DESC - Book Text');
+  
+  AddRecord('MysticismMagic.esp', 'EDID - Editor ID');
   
   StartPatching('WEAP');
-  // Sounds
+  //// Sounds
+  AddRecord('Audio Overhaul Skyrim.esp', 'BIDS - Block Bash Impact Data Set');
   AddRecord('Audio Overhaul Skyrim.esp', 'INAM - Impact Data Set');
-  
+  //
   StartPatching('FACT');
-  AddRecord('Crime Overhaul Expanded.esp', 'DATA - Flags');
   AddRecord('Wild World.esp', 'Relations');
-  AddRecord('Wild World.esp', 'DATA - Flags');
+  AddRecord('Wild World - Crime Overhaul.esp', 'DATA - Flags');
   AddRecord('Settlements Expanded SE.esp', 'Relations');
   
-  StartPatching('CELL');
-  // Light
-  AddRecord('Luminosity - Skyrim is Lit Edition.esp', 'XCLL - Lighting');
-  AddRecord('OCW_Settings.esp', 'XCLL\Inherits');
-  AddRecord('OCW_Settings.esp', 'LTMP');
-  AddRecord('Particle Patch for ENB SSE.esp', 'DATA - Flags');
-  AddRecord('Particle Patch for ENB SSE.esp', 'XCCM');
-  AddRecord('Particle Patch for ENB SSE.esp', 'XCIM');
-  AddRecord('Luminosity - Skyrim is Lit Edition.esp', 'XCCM');
-  AddRecord('ENB Light.esp', 'FNAM - Fade value');
-  AddRecord('Unique Display Room.esp', 'XEZN - Encounter Zone');
- 
-  // Music
-  AddRecord('Soulmancer Soundtrack - NoVindDun.esp', 'XCMO');
+  StartPatching('WRLD');
   
-  // Locations
-  AddRecord('SkyfallEstateBuildable.esp', 'XLCN - Location');
+  // XCLL
+  AddRecord('OCW_CellSettings.esp', 'XCLL\Inherits');
+  AddRecord('Luminosity - Skyrim is Lit Edition.esp', 'XCLL - Lighting');
+  
+  // LTMP
+  AddRecord('OCW_CellSettings.esp', 'LTMP');
+  
+  // XCCM
+  AddRecord('Luminosity - Skyrim is Lit Edition.esp', 'XCCM');
+  
+  // XCIM
+  AddRecord('OCW_CellSettings.esp', 'XCIM');
+  
+  // XCWT
+  AddRecord('Water for ENB.esp', 'XCWT - Water');
+  
+   XCAS
+  AddRecord('Unofficial Skyrim Special Edition Patch.esp', 'XCAS - Acoustic Space');
+  AddRecord('OCW_CellSettings.esp', 'XCAS - Acoustic Space');
+  
+  // XLCN
   AddRecord('Oakwood.esp', 'XLCN - Location');
-  AddRecord('Gavorstead.esp', 'XLCN - Location');
   AddRecord('Forgotten DungeonsSSE.esm', 'XLCN - Location');
   AddRecord('Improved Adoptions MERGED.esp', 'XLCN - Location');
   AddRecord('Alternate Start - Live Another Life.esp', 'XLCN - Location');
-  AddRecord('Unofficial Skyrim Special Edition Patch', 'XLCN - Location'); 
+  AddRecord('Unofficial Skyrim Special Edition Patch.esp', 'XLCN - Location'); 
+  
+  StartPatching('LIGH');
+  AddRecord('Luminosity - Skyrim is Lit Edition.esp', 'DATA - DATA');
+  AddRecord('Shadows.esp', 'DATA - DATA \ Near Clip');
+  AddRecord('Shadows.esp', 'DATA - DATA \ Flicker Effect');
   
   StartPatching('SCRL');
   AddRecord('Unofficial Skyrim Special Edition Patch.esp', 'KWDA - Keywords');
+  
+  StartPatching('REFR');
+  AddRecord('Soljund''s Sinkhole.esp', 'Map Marker');
+  AddRecord('Soljund''s Sinkhole.esp', 'XRDS - Radius');
+  AddRecord('Soljund''s Sinkhole.esp', 'DATA - Position');
   
   BuildPatch('SmartPatch');
   Result := 0;
