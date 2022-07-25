@@ -2,10 +2,12 @@ unit TSKit_Sandboxing;
 
 uses TSKit;
 uses mteFunctions;
+uses mteElements;
 
 /// Script that runs on MGEF group and searches for specified modifier in effect's data.
 
-const modifier = 'Light Armor Modifier';
+const modifier = 'Purify Alchemy Ingredients';
+// const modifier = 'Light Armor Modifier';
 // const modifier = 'Light Armor Power Modifier';
 // const modifier = 'Heavy Armor Modifier';
 // const modifier = 'Heavy Armor Power Modifier';

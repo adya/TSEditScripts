@@ -1,7 +1,7 @@
 ﻿unit TSKit;
 
 const
-  enableDebug = true;
+  enableDebug = false;
   allowDuplicates = false;
   patchPluginNamePrefix = 'Dynamic Patch';
 
@@ -19,6 +19,11 @@ end;
 function Stringify(element: IInterface): String;
 begin
   Result := Name(element) + ' | at ' + FullPath(element) + ' | from ' + GetFileName(GetFile(element));
+end;
+
+procedure Log(pluginName, signature, info: String);
+begin
+  AddMessage('[' + pluginName + '] [' + signature + ']: ' + info);
 end;
 
 procedure Debug(msg: String);
@@ -142,4 +147,8 @@ begin
   end;
 end;
 
+function Contains(const source, substring: String): Boolean;
+begin
+Result := Pos(substring, source) > 1;
+end;
 end.

@@ -1,6 +1,8 @@
 unit TSKitPrint;
 
 uses TSKit;
+uses mteElements;
+uses mteFunctions;
 
 function Process(e: IInterface): integer;
 begin

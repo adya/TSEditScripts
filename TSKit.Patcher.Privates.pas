@@ -1,6 +1,7 @@
 ﻿unit TSKitPatcherPrivates;
 
 uses TSKit;
+uses mteFunctions;
 uses 'TSKit.Patcher.Records';
 
 // ================== Patcher Privates ==================
@@ -51,7 +52,7 @@ begin
 		Exit; // skip patcher file itself.
 	end;
 	
-  currentPatcherPlugin := FileByName(plugin);
+	currentPatcherPlugin := FileByName(plugin);
 	if not Assigned(currentPatcherPlugin) then begin
 		AddMessage('Plugin "' + plugin + '" was not found');
 		exit;
@@ -74,6 +75,10 @@ begin
 			currentPatcherRecords.Free;
 		end;
 	finally
+		// Intermediate clean up to avoid overflows in masters.
+		if Assigned(patchPlugin) then begin
+			CleanMasters(patchPlugin);
+		end;
 		currentPatcherSignatures.Free;
 	end;
 end;
@@ -94,7 +99,7 @@ begin
 	end;
 	
 	group := GroupBySignature(currentPatcherPlugin, signature);
-	Debug('Processing ' + IntToStr(ElementCount(group)) + ' elements in group ' + signature + ' ' + Stringify(group));
+	Log(currentPatcherPluginName, signature, 'Processing ' + IntToStr(ElementCount(group)) + ' elements');
 	if signature = 'CELL' then begin
 		for j := 0 to Pred(ElementCount(group)) do begin
 			block := ElementByIndex(group, j);
@@ -220,7 +225,9 @@ function GetPatchableWinningOverride(element: IwbElement): IwbElement;
 var
   candidate: IwbElement;
 begin
-  Result := WinningOverride(element);  
+  candidate := WinningOverride(element);  
+  if ShouldBePatched(candidate) then
+	Result := candidate;
 end;
 
 /// Gets Element of the Patcher plugin if any for specified element.
@@ -268,7 +275,7 @@ begin
       Debug(Stringify(element) + ' has patcher: ' + Stringify(overrideMaster));
       hasPatcher := true;
     end;
-    
+
     // 2
     //    if not hasPatchable and true then begin
     //      hasPatchable := true;
